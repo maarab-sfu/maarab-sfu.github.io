@@ -1,7 +1,7 @@
 ---
 title: "FlexMark: Adaptive Watermarking Method for Images"
 collection: publications
-permalink: /publications/20240-FlexMark-number-3
+permalink: /publications/2024-FlexMark-number-3
 venue: "ACM Multimedia Systems"
 excerpt: 'We proposed a flexible watermarking method that can be used in different scenarios from copyright protection to data hiding.'
 date: 2024-04-13
