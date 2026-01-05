@@ -4,7 +4,7 @@ main:
     url: /publications/   
 
   - title: "Demo"
-    url: /demo.html    
+    url: /Demo.html    
     
   - title: "CV"
     url: /files/CV.pdf
