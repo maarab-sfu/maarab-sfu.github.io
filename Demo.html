@@ -10,14 +10,20 @@
 
 <input type="file" id="embedInput" accept="image/*">
 <br><br>
-<button onclick="runEmbed()">Protect Image</button>
+<button id="embedBtn" onclick="runEmbed()">Protect Image</button>
 
 <br><br>
+<h4>Input Image</h4>
 <img id="embedPreview" width="256">
+
 <br><br>
+<h4>Protected Image</h4>
 <img id="protectedImage" width="256">
+
 <br><br>
-<a id="downloadProtected" download>Download Protected Image</a>
+<a id="downloadProtected" download style="display:none;">
+  Download Protected Image
+</a>
 
 <hr>
 
@@ -25,7 +31,11 @@
 
 <input type="file" id="extractInput" accept="image/*">
 <br><br>
-<button onclick="runExtract()">Run Extraction</button>
+<button id="extractBtn" onclick="runExtract()">Run Extraction</button>
+
+<br><br>
+<h4>Input (Protected / Tampered)</h4>
+<img id="extractPreview" width="256">
 
 <br><br>
 <h4>Restored Image</h4>
@@ -37,72 +47,121 @@
 <script>
 const API_BASE = "http://13.220.125.117:8000";
 
+/* ---------- Utilities ---------- */
+
 function previewImage(input, imgElement) {
   const file = input.files[0];
   if (!file) return;
   imgElement.src = URL.createObjectURL(file);
 }
 
-document.getElementById("embedInput").addEventListener("change", () => {
-  previewImage(document.getElementById("embedInput"),
-               document.getElementById("embedPreview"));
-});
-
-async function runEmbed() {
-  const fileInput = document.getElementById("embedInput");
-  if (!fileInput.files.length) {
-    alert("Please select an image.");
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("file", fileInput.files[0]);
-
-  const res = await fetch(`${API_BASE}/embed`, {
-    method: "POST",
-    body: formData
-  });
-
-  const data = await res.json();
-  if (!data.success) {
-    alert("Embedding failed");
-    return;
-  }
-
-  const imgUrl = API_BASE + data.protected_image;
-  const img = document.getElementById("protectedImage");
-  img.src = imgUrl;
-
-  const dl = document.getElementById("downloadProtected");
-  dl.href = imgUrl;
+function clearExtractionOutputs() {
+  document.getElementById("restoredImage").src = "";
+  document.getElementById("maskImage").src = "";
 }
 
-async function runExtract() {
-  const fileInput = document.getElementById("extractInput");
+/* ---------- Input previews ---------- */
+
+document.getElementById("embedInput").addEventListener("change", () => {
+  previewImage(
+    document.getElementById("embedInput"),
+    document.getElementById("embedPreview")
+  );
+  document.getElementById("protectedImage").src = "";
+  document.getElementById("downloadProtected").style.display = "none";
+});
+
+document.getElementById("extractInput").addEventListener("change", () => {
+  previewImage(
+    document.getElementById("extractInput"),
+    document.getElementById("extractPreview")
+  );
+  clearExtractionOutputs();
+});
+
+/* ---------- Embed ---------- */
+
+async function runEmbed() {
+  const btn = document.getElementById("embedBtn");
+  const fileInput = document.getElementById("embedInput");
+
   if (!fileInput.files.length) {
     alert("Please select an image.");
     return;
   }
 
+  btn.disabled = true;
+
   const formData = new FormData();
   formData.append("file", fileInput.files[0]);
 
-  const res = await fetch(`${API_BASE}/extract`, {
-    method: "POST",
-    body: formData
-  });
+  try {
+    const res = await fetch(`${API_BASE}/embed`, {
+      method: "POST",
+      body: formData
+    });
 
-  const data = await res.json();
-  if (!data.success) {
-    alert("Extraction failed");
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.detail || "Embedding failed");
+    }
+
+    const imgUrl = API_BASE + data.protected_image;
+
+    document.getElementById("protectedImage").src = imgUrl;
+
+    const dl = document.getElementById("downloadProtected");
+    dl.href = imgUrl;
+    dl.style.display = "inline";
+
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---------- Extract ---------- */
+
+async function runExtract() {
+  const btn = document.getElementById("extractBtn");
+  const fileInput = document.getElementById("extractInput");
+
+  if (!fileInput.files.length) {
+    alert("Please select an image.");
     return;
   }
 
-  document.getElementById("restoredImage").src =
-    API_BASE + data.restored_image;
+  btn.disabled = true;
+  clearExtractionOutputs();
 
-  document.getElementById("maskImage").src =
-    API_BASE + data.localization_mask;
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+
+  try {
+    const res = await fetch(`${API_BASE}/extract`, {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.detail || "Extraction failed");
+    }
+
+    document.getElementById("restoredImage").src =
+      API_BASE + data.restored_image;
+
+    document.getElementById("maskImage").src =
+      API_BASE + data.localization_mask;
+
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    btn.disabled = false;
+  }
 }
 </script>
 
